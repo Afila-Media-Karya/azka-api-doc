@@ -34,7 +34,7 @@ paths:
     post:
       tags:
         - Authentication
-      summary: User login
+      summary: Employee login
       description: Authenticate user with email and password
       operationId: loginUser
       requestBody:
@@ -47,7 +47,7 @@ paths:
               valid_login:
                 summary: Valid login credentials
                 value:
-                  email: "user@example.com"
+                  email: "aasoo@afila.co.id"
                   password: "password123"
       responses:
         '200':
@@ -61,14 +61,13 @@ paths:
                   summary: Successful login
                   value:
                     success: true
+                    message: "Success Login"
                     data:
-                      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                      user:
-                        id: 1
-                        email: "user@example.com"
-                        name: "John Doe"
-                        role: "user"
-                    message: "Login successful"
+                      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+                      refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+                      ttl: 123
+                    user:
+                      $ref: '#/components/schemas/User'
         '401':
           description: Invalid credentials
           content:
@@ -350,6 +349,83 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationErrorResponse'
 
+  # Employee Endpoints
+  /employee:
+    get:
+      tags:
+        - Employee
+      summary: Get current employee information
+      description: Retrieve the current employee's detailed information
+      operationId: getCurrentEmployee
+      parameters:
+        - name: token
+          in: query
+          description: Authentication token
+          required: true
+          schema:
+            type: string
+            example: "fdasjkhfkajdhfa"
+      responses:
+        '200':
+          description: Employee information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+              examples:
+                success:
+                  summary: Successful employee data retrieval
+                  value:
+                    success: true
+                    message: "Success"
+                    data:
+                      id: "1"
+                      name: "John Doe"
+                      email: "john.doe@afila.co.id"
+                      phone: "+62812345678"
+                      position_id: "pos_001"
+                      position_name: "Software Engineer"
+                      departemen_id: "dept_001"
+                      departemen_name: "IT Department"
+                      profile_image_url: "https://example.com/profile/john.jpg"
+                      company_name: "Afila Technology"
+                      created_at: "2023-01-15T08:30:00Z"
+                      updated_at: "2023-12-01T10:15:00Z"
+        '401':
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  summary: Invalid token
+                  value:
+                    success: false
+                    error:
+                      code: "INVALID_TOKEN"
+                      message: "Invalid or expired token"
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: Employee not found
+                  value:
+                    success: false
+                    error:
+                      code: "EMPLOYEE_NOT_FOUND"
+                      message: "Employee information not found"
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -533,18 +609,29 @@ components:
         success:
           type: boolean
           example: true
+        message:
+          type: string
+          example: "Success Login"
         data:
           type: object
           properties:
             token:
               type: string
+              nullable: true
               description: JWT authentication token
-              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            user:
-              $ref: '#/components/schemas/User'
-        message:
-          type: string
-          example: "Login successful"
+              example: "fdasjkhfkajdhfa"
+            refresh_token:
+              type: string
+              nullable: true
+              description: JWT refresh token for token renewal
+              example: "fdksahfkas"
+            ttl:
+              type: integer
+              description: Token time to live in seconds
+              example: 123
+              default: 0
+        user:
+          $ref: '#/components/schemas/User'
 
     RegisterResponse:
       type: object
@@ -718,3 +805,84 @@ tags:
     description: User management operations
   - name: Profile
     description: User profile management
+  - name: Employee
+    description: Employee information and management
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+          description: Employee's unique identifier
+          example: "1"
+        name:
+          type: string
+          nullable: true
+          description: Employee's full name
+          example: "John Doe"
+        email:
+          type: string
+          nullable: true
+          format: email
+          description: Employee's email address
+          example: "john.doe@afila.co.id"
+        phone:
+          type: string
+          nullable: true
+          description: Employee's phone number
+          example: "+62812345678"
+        position_id:
+          type: string
+          nullable: true
+          description: Employee's position ID
+          example: "pos_001"
+        position_name:
+          type: string
+          nullable: true
+          description: Employee's position name
+          example: "Software Engineer"
+        departemen_id:
+          type: string
+          nullable: true
+          description: Employee's department ID
+          example: "dept_001"
+        departemen_name:
+          type: string
+          nullable: true
+          description: Employee's department name
+          example: "IT Department"
+        profile_image_url:
+          type: string
+          nullable: true
+          description: URL to employee's profile image
+          example: "https://example.com/profile/john.jpg"
+        company_name:
+          type: string
+          nullable: true
+          description: Company name
+          example: "Afila Technology"
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Account creation timestamp
+          example: "2023-01-15T08:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last update timestamp
+          example: "2023-12-01T10:15:00Z"
+
+    EmployeeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Success"
+        data:
+          $ref: '#/components/schemas/Employee'
