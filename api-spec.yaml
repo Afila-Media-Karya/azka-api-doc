@@ -30,7 +30,7 @@ servers:
 
 paths:
   # Authentication Endpoints
-  /auth/login:
+  /login:
     post:
       tags:
         - Authentication
@@ -80,6 +80,67 @@ paths:
                     error:
                       code: "INVALID_CREDENTIALS"
                       message: "Invalid email or password"
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+  # Register - Check Company
+  /employee/check-company:
+    post:
+      tags:
+        - Employee
+      summary: Check Company by Unique Code in Register Employee Process
+      description: >
+        This endpoint is used to check if a company with the provided unique code exists in the system.
+        It is typically invoked during the registration process to verify the company's existence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckCompanyRequest'
+            examples:
+              valid_company_code:
+                summary: Valid company code
+                value:
+                  company_code: "REFAW213"
+              invalid_company_code:
+                summary: Invalid company code
+                value:
+                  company_code: "INVALID1"
+      responses:
+        '200':
+          description: Company check successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckCompanyResponse'
+              examples:
+                success:
+                  summary: Company found
+                  value:
+                    success: true
+                    message: "Success"
+                    data:
+                      company_image_url: "https://example.com/company/logo.png"
+                      company_name: "PT AFI LAH"
+                      company_category_business: "Technology"
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: Company not found
+                  value:
+                    success: false
+                    error:
+                      code: "COMPANY_NOT_FOUND"
+                      message: "Company with the provided code not found"
         '422':
           description: Validation error
           content:
@@ -391,3 +452,44 @@ tags:
           example: "Success"
         data:
           $ref: '#/components/schemas/Employee'
+
+    CheckCompanyRequest:
+      type: object
+      required:
+        - company_code
+      properties:
+        company_code:
+          type: string
+          minLength: 8
+          maxLength: 8
+          description: Unique 8-character company code
+          example: "REFAW213"
+          pattern: "^[A-Z0-9]{8}$"
+
+    CheckCompanyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Success"
+        data:
+          type: object
+          properties:
+            company_image_url:
+              type: string
+              nullable: true
+              description: URL to company logo/image
+              example: "https://example.com/company/logo.png"
+            company_name:
+              type: string
+              nullable: true
+              description: Company name
+              example: "PT AFI LAH"
+            company_category_business:
+              type: string
+              nullable: true
+              description: Company business category
+              example: "Technology"
