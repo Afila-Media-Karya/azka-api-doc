@@ -714,12 +714,12 @@ tags:
     #       description: Password confirmation (required)
     #       example: "password123"
 
-    EmployeeRegisterResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Success Register, Please Check Your Email"
+    # EmployeeRegisterResponse:
+    #   type: object
+    #   properties:
+    #     success:
+    #       type: boolean
+    #       example: true
+    #     message:
+    #       type: string
+    #       example: "Success Register, Please Check Your Email"
