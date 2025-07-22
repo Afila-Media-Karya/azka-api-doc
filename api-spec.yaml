@@ -373,6 +373,75 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationErrorResponse'
 
+    post:
+      tags:
+        - Announcements
+      summary: Create new announcement
+      description: Create a new announcement with specified details and target audience
+      operationId: createAnnouncement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          description: Bearer token for authentication
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnnouncementRequest'
+            examples:
+              valid_announcement:
+                summary: Valid announcement creation
+                value:
+                  token: "fdasjkhfkajdhfa"
+                  title: "New Company Policy"
+                  category: "HR"
+                  view_start_date: "2023-12-01T08:00:00Z"
+                  view_end_date: "2023-12-31T23:59:59Z"
+                  image_url: "https://example.com/announcements/policy.jpg"
+                  content: "Please review the updated company policy document."
+                  target_audience: "1231,12312,12312,12312"
+      responses:
+        '201':
+          description: Announcement created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAnnouncementResponse'
+              examples:
+                success:
+                  summary: Successful announcement creation
+                  value:
+                    success: true
+                    message: "Announcement created successfully"
+                    data: {}
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    success: false
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "The given data was invalid"
+                      details:
+                        title: ["The title field is required."]
+                        category: ["The category field is required."]
+                        view_start_date: ["The view start date field is required."]
+
 components:
   securitySchemes:
     bearerAuth:
@@ -737,3 +806,67 @@ tags:
     description: Employee information and management
   - name: Announcements
     description: Company announcements and news
+
+    CreateAnnouncementRequest:
+      type: object
+      required:
+        - title
+        - category
+        - view_start_date
+        - view_end_date
+        - content
+        - target_audience
+      properties:
+        token:
+          type: string
+          description: Authorization token
+          example: "fdasjkhfkajdhfa"
+        title:
+          type: string
+          nullable: true
+          description: Announcement title (required)
+          example: "New Company Policy"
+        category:
+          type: string
+          nullable: true
+          description: Announcement category (required)
+          example: "HR"
+        view_start_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Start date when announcement becomes visible (required)
+          example: "2023-12-01T08:00:00Z"
+        view_end_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: End date when announcement stops being visible (required)
+          example: "2023-12-31T23:59:59Z"
+        image_url:
+          type: string
+          nullable: true
+          description: URL to announcement image (optional)
+          example: "https://example.com/announcements/policy.jpg"
+        content:
+          type: string
+          nullable: true
+          description: Announcement content/description (required)
+          example: "Please review the updated company policy document."
+        target_audience:
+          type: string
+          description: Comma-separated position IDs for target audience (required)
+          example: "1231,12312,12312,12312"
+
+    CreateAnnouncementResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Announcement created successfully"
+        data:
+          type: object
+          example: {}
