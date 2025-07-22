@@ -4,13 +4,20 @@ info:
   description: |
     API documentation for Azka project
     
-    This API provides endpoints for :
-    - Employee authentication and register
-    - Employee 
+    This API provides endpoints for:
+    - Employee authentication and registration
+    - Employee management
     - Profile management
+    - Company announcements
     
     ## Authentication
-    Most endpoints require Bearer token authentication.
+    Most endpoints require Bearer token authentication using JWT tokens.
+    
+    ## Rate Limiting
+    API requests are rate limited to ensure fair usage.
+    
+    ## Error Handling
+    All errors follow a consistent format with appropriate HTTP status codes.
   version: 1.0.0
   contact:
     name: Afila Dev Team
@@ -25,8 +32,16 @@ servers:
     description: Production server
   - url: https://staging-api.azka.com/api/v1
     description: Staging server
-  - url: http://localhost:port/api/v1
+  - url: http://localhost:8080/api/v1
     description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints
+  - name: Employee
+    description: Employee information and management endpoints
+  - name: Announcements
+    description: Company announcements and news management
 
 paths:
   # Authentication Endpoints
@@ -35,7 +50,7 @@ paths:
       tags:
         - Authentication
       summary: Employee login
-      description: Authenticate user with email and password
+      description: Authenticate user with email and password to receive JWT tokens
       operationId: loginUser
       requestBody:
         required: true
@@ -65,36 +80,22 @@ paths:
                     data:
                       token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
                       refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-                      ttl: 123
+                      ttl: 3600
         '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_credentials:
-                  summary: Invalid email or password
-                  value:
-                    success: false
-                    error:
-                      code: "INVALID_CREDENTIALS"
-                      message: "Invalid email or password"
+          $ref: '#/components/responses/UnauthorizedError'
         '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-  # Register - Check Company
+          $ref: '#/components/responses/ValidationError'
+
+  # Employee Registration Flow
   /employee/check-company:
     post:
       tags:
         - Employee
-      summary: Check Company by Unique Code in Register Employee Process
+      summary: Check company by unique code
       description: >
-        This endpoint is used to check if a company with the provided unique code exists in the system.
-        It is typically invoked during the registration process to verify the company's existence.
+        Verify if a company with the provided unique code exists in the system.
+        This endpoint is typically used during the employee registration process.
+      operationId: checkCompany
       requestBody:
         required: true
         content:
@@ -128,21 +129,10 @@ paths:
                       company_name: "PT AFI LAH"
                       company_category_business: "Technology"
         '404':
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Company not found
-                  value:
-                    success: false
-                    error:
-                      code: "COMPANY_NOT_FOUND"
-                      message: "Company with the provided code not found"
-  
-  # Register - Employee Register
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /employee/register:
     post:
       tags:
@@ -165,13 +155,13 @@ paths:
                   company_code: "REFAW213"
                   name: "John Doe"
                   birth_place: "Makassar"
-                  birth_date: "11/2/1998"
+                  birth_date: "1998-02-11"
                   phone: "+62812345678"
                   email: "john.doe@example.com"
                   password: "password123"
                   password_confirmation: "password123"
       responses:
-        '200':
+        '201':
           description: Employee registration successful
           content:
             application/json:
@@ -183,23 +173,6 @@ paths:
                   value:
                     success: true
                     message: "Success Register, Please Check Your Email"
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-              examples:
-                validation_error:
-                  summary: Validation failed
-                  value:
-                    success: false
-                    error:
-                      code: "VALIDATION_ERROR"
-                      message: "The given data was invalid"
-                      details:
-                        email: ["The email field is required."]
-                        password: ["The password must be at least 8 characters."]
         '409':
           description: Employee already exists
           content:
@@ -214,23 +187,19 @@ paths:
                     error:
                       code: "EMPLOYEE_EXISTS"
                       message: "Employee with this email already exists"
-  
-  # Employee Endpoints
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # Employee Information
   /employee:
     get:
       tags:
         - Employee
       summary: Get current employee information
-      description: Retrieve the current employee's detailed information
+      description: Retrieve the current authenticated employee's detailed information
       operationId: getCurrentEmployee
-      parameters:
-        - name: token
-          in: query
-          description: Authentication token
-          required: true
-          schema:
-            type: string
-            example: "fdasjkhfkajdhfa"
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Employee information retrieved successfully
@@ -258,41 +227,11 @@ paths:
                       created_at: "2023-01-15T08:30:00Z"
                       updated_at: "2023-12-01T10:15:00Z"
         '401':
-          description: Invalid or missing token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_token:
-                  summary: Invalid token
-                  value:
-                    success: false
-                    error:
-                      code: "INVALID_TOKEN"
-                      message: "Invalid or expired token"
+          $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Employee not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Employee not found
-                  value:
-                    success: false
-                    error:
-                      code: "EMPLOYEE_NOT_FOUND"
-                      message: "Employee information not found"
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
+          $ref: '#/components/responses/NotFoundError'
 
-  # Announcements Endpoints
+  # Announcements Management
   /announcements:
     get:
       tags:
@@ -303,13 +242,6 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: Authorization
-          in: header
-          description: Bearer token for authentication
-          required: true
-          schema:
-            type: string
-            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         - name: page
           in: query
           description: Page number for pagination
@@ -329,6 +261,13 @@ paths:
             maximum: 100
             default: 10
             example: 10
+        - name: category
+          in: query
+          description: Filter by announcement category
+          required: false
+          schema:
+            type: string
+            example: "HR"
       responses:
         '200':
           description: Announcements retrieved successfully
@@ -367,11 +306,7 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
+          $ref: '#/components/responses/ValidationError'
 
     post:
       tags:
@@ -381,14 +316,6 @@ paths:
       operationId: createAnnouncement
       security:
         - bearerAuth: []
-      parameters:
-        - name: Authorization
-          in: header
-          description: Bearer token for authentication
-          required: true
-          schema:
-            type: string
-            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       requestBody:
         required: true
         content:
@@ -399,7 +326,6 @@ paths:
               valid_announcement:
                 summary: Valid announcement creation
                 value:
-                  token: "fdasjkhfkajdhfa"
                   title: "New Company Policy"
                   category: "HR"
                   view_start_date: "2023-12-01T08:00:00Z"
@@ -420,106 +346,13 @@ paths:
                   value:
                     success: true
                     message: "Announcement created successfully"
-                    data: {}
+                    data:
+                      id: "123"
+                      created_at: "2023-12-01T08:00:00Z"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-              examples:
-                validation_error:
-                  summary: Validation failed
-                  value:
-                    success: false
-                    error:
-                      code: "VALIDATION_ERROR"
-                      message: "The given data was invalid"
-                      details:
-                        title: ["The title field is required."]
-                        category: ["The category field is required."]
-
-    delete:
-      tags:
-        - Announcements
-      summary: Delete announcement
-      description: Delete an existing announcement by ID
-      operationId: deleteAnnouncement
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          description: Announcement ID to delete
-          required: true
-          schema:
-            type: integer
-            example: 123
-        - name: Authorization
-          in: header
-          description: Bearer token for authentication
-          required: true
-          schema:
-            type: string
-            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteAnnouncementRequest'
-            examples:
-              valid_delete:
-                summary: Valid announcement deletion
-                value:
-                  token: "fdasjkhfkajdhfa"
-      responses:
-        '200':
-          description: Announcement deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteAnnouncementResponse'
-              examples:
-                success:
-                  summary: Successful announcement deletion
-                  value:
-                    success: true
-                    message: "Announcement deleted successfully"
-                    data: {}
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          description: Announcement not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Announcement not found
-                  value:
-                    success: false
-                    error:
-                      code: "NOT_FOUND"
-                      message: "Announcement not found"
-        '403':
-          description: Forbidden - insufficient permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                forbidden:
-                  summary: Insufficient permissions
-                  value:
-                    success: false
-                    error:
-                      code: "FORBIDDEN"
-                      message: "You don't have permission to delete this announcement"
-                        view_start_date: ["The view start date field is required."]
+          $ref: '#/components/responses/ValidationError'
 
   /announcements/{id}:
     put:
@@ -536,15 +369,9 @@ paths:
           description: Announcement ID to update
           required: true
           schema:
-            type: integer
-            example: 123
-        - name: Authorization
-          in: header
-          description: Bearer token for authentication
-          required: true
-          schema:
             type: string
-            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            format: uuid
+            example: "123e4567-e89b-12d3-a456-426614174000"
       requestBody:
         required: true
         content:
@@ -555,7 +382,6 @@ paths:
               valid_update:
                 summary: Valid announcement update
                 value:
-                  token: "fdasjkhfkajdhfa"
                   title: "Updated Company Policy"
                   category: "HR"
                   view_start_date: "2023-12-01T08:00:00Z"
@@ -576,40 +402,44 @@ paths:
                   value:
                     success: true
                     message: "Announcement updated successfully"
-                    data: {}
+                    data:
+                      id: "123"
+                      updated_at: "2023-12-01T10:30:00Z"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '404':
-          description: Announcement not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Announcement not found
-                  value:
-                    success: false
-                    error:
-                      code: "NOT_FOUND"
-                      message: "Announcement not found"
+          $ref: '#/components/responses/NotFoundError'
         '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-              examples:
-                validation_error:
-                  summary: Validation failed
-                  value:
-                    success: false
-                    error:
-                      code: "VALIDATION_ERROR"
-                      message: "The given data was invalid"
-                      details:
-                        title: ["The title field is required."]
-                        category: ["The category field is required."]
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Announcements
+      summary: Delete announcement
+      description: Delete an existing announcement by ID
+      operationId: deleteAnnouncement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Announcement ID to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '204':
+          description: Announcement deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
 
 components:
   securitySchemes:
@@ -617,15 +447,128 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token for authentication
+      description: JWT token for authentication. Include 'Bearer ' prefix.
 
   schemas:
-    # Request Schemas
+    # Base Response Schemas
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        message:
+          type: string
+          description: Human-readable message
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [false]
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Error code for programmatic handling
+                  example: "INVALID_CREDENTIALS"
+                message:
+                  type: string
+                  description: Human-readable error message
+                  example: "Invalid email or password"
+                details:
+                  type: object
+                  description: Additional error details
+                  additionalProperties: true
+              required:
+                - code
+                - message
+          required:
+            - error
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [false]
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                  enum: ["VALIDATION_ERROR"]
+                message:
+                  type: string
+                  example: "The given data was invalid"
+                details:
+                  type: object
+                  description: Field-specific validation errors
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                  example:
+                    email: ["The email field is required."]
+                    password: ["The password must be at least 8 characters."]
+              required:
+                - code
+                - message
+                - details
+          required:
+            - error
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
+        per_page:
+          type: integer
+          minimum: 1
+          description: Number of items per page
+          example: 10
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 100
+        total_pages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 10
+        has_next_page:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_prev_page:
+          type: boolean
+          description: Whether there is a previous page
+          example: false
+      required:
+        - current_page
+        - per_page
+        - total
+        - total_pages
+        - has_next_page
+        - has_prev_page
+
+    # Authentication Schemas
     LoginRequest:
       type: object
-      required:
-        - email
-        - password
       properties:
         email:
           type: string
@@ -638,244 +581,208 @@ components:
           minLength: 6
           description: User's password
           example: "password123"
+      required:
+        - email
+        - password
 
-    Pagination:
-      type: object
-      properties:
-        current_page:
-          type: integer
-          example: 1
-        per_page:
-          type: integer
-          example: 10
-        total:
-          type: integer
-          example: 100
-        total_pages:
-          type: integer
-          example: 10
-        has_next_page:
-          type: boolean
-          example: true
-        has_prev_page:
-          type: boolean
-          example: false
-
-    ErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        error:
-          type: object
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
           properties:
-            code:
-              type: string
-              description: Error code
-              example: "INVALID_CREDENTIALS"
-            message:
-              type: string
-              description: Human-readable error message
-              example: "Invalid email or password"
-            details:
+            success:
+              type: boolean
+              enum: [true]
+            data:
               type: object
-              description: Additional error details
-              nullable: true
-
-    ValidationErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              example: "VALIDATION_ERROR"
-            message:
-              type: string
-              example: "The given data was invalid"
-            details:
-              type: object
-              description: Field-specific validation errors
-              additionalProperties:
-                type: array
-                items:
+              properties:
+                token:
                   type: string
-              example:
-                email: ["The email field is required."]
-                password: ["The password must be at least 8 characters."]
+                  description: JWT access token
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                refresh_token:
+                  type: string
+                  description: JWT refresh token
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                ttl:
+                  type: integer
+                  description: Token time to live in seconds
+                  example: 3600
+              required:
+                - token
+                - refresh_token
+                - ttl
+          required:
+            - data
 
-  responses:
-    UnauthorizedError:
-      description: Authentication required
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          examples:
-            unauthorized:
-              summary: Missing or invalid token
-              value:
-                success: false
-                error:
-                  code: "UNAUTHORIZED"
-                  message: "Authentication required"
-
-    ForbiddenError:
-      description: Insufficient permissions
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          examples:
-            forbidden:
-              summary: Insufficient permissions
-              value:
-                success: false
-                error:
-                  code: "FORBIDDEN"
-                  message: "Insufficient permissions to access this resource"
-
-    NotFoundError:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          examples:
-            not_found:
-              summary: Resource not found
-              value:
-                success: false
-                error:
-                  code: "NOT_FOUND"
-                  message: "The requested resource was not found"
+    # Employee Schemas
     Employee:
       type: object
       properties:
         id:
           type: string
-          nullable: true
           description: Employee's unique identifier
           example: "1"
         name:
           type: string
-          nullable: true
           description: Employee's full name
           example: "John Doe"
         email:
           type: string
-          nullable: true
           format: email
           description: Employee's email address
           example: "john.doe@afila.co.id"
         phone:
           type: string
-          nullable: true
-          description: Employee's phone number
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: Employee's phone number in E.164 format
           example: "+62812345678"
         position_id:
           type: string
-          nullable: true
           description: Employee's position ID
           example: "pos_001"
         position_name:
           type: string
-          nullable: true
           description: Employee's position name
           example: "Software Engineer"
         departemen_id:
           type: string
-          nullable: true
           description: Employee's department ID
           example: "dept_001"
         departemen_name:
           type: string
-          nullable: true
           description: Employee's department name
           example: "IT Department"
         profile_image_url:
           type: string
-          nullable: true
+          format: uri
           description: URL to employee's profile image
           example: "https://example.com/profile/john.jpg"
         company_name:
           type: string
-          nullable: true
           description: Company name
           example: "Afila Technology"
         created_at:
           type: string
           format: date-time
-          nullable: true
           description: Account creation timestamp
           example: "2023-01-15T08:30:00Z"
         updated_at:
           type: string
           format: date-time
-          nullable: true
           description: Last update timestamp
           example: "2023-12-01T10:15:00Z"
 
     EmployeeResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Success"
-        data:
-          $ref: '#/components/schemas/Employee'
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [true]
+            data:
+              $ref: '#/components/schemas/Employee'
+          required:
+            - data
 
     CheckCompanyRequest:
       type: object
-      required:
-        - company_code
       properties:
         company_code:
           type: string
           minLength: 8
           maxLength: 8
-          description: Unique 8-character company code
+          pattern: '^[A-Z0-9]{8}$'
+          description: Unique 8-character company code (alphanumeric, uppercase)
           example: "REFAW213"
-          pattern: "^[A-Z0-9]{8}$"
+      required:
+        - company_code
 
     CheckCompanyResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Success"
-        data:
-          type: object
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
           properties:
-            company_image_url:
-              type: string
-              nullable: true
-              description: URL to company logo/image
-              example: "https://example.com/company/logo.png"
-            company_name:
-              type: string
-              nullable: true
-              description: Company name
-              example: "PT AFI LAH"
-            company_category_business:
-              type: string
-              nullable: true
-              description: Company business category
-              example: "Technology"
+            success:
+              type: boolean
+              enum: [true]
+            data:
+              type: object
+              properties:
+                company_image_url:
+                  type: string
+                  format: uri
+                  description: URL to company logo/image
+                  example: "https://example.com/company/logo.png"
+                company_name:
+                  type: string
+                  description: Company name
+                  example: "PT AFI LAH"
+                company_category_business:
+                  type: string
+                  description: Company business category
+                  example: "Technology"
+              required:
+                - company_name
+                - company_category_business
+          required:
+            - data
 
     EmployeeRegisterRequest:
       type: object
+      properties:
+        company_departemen:
+          type: string
+          description: Company department
+          example: "RnD"
+        company_position:
+          type: string
+          description: Company position
+          example: "UI UX Designer"
+        company_code:
+          type: string
+          minLength: 8
+          maxLength: 8
+          pattern: '^[A-Z0-9]{8}$'
+          description: Company unique code
+          example: "REFAW213"
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Employee full name
+          example: "John Doe"
+        birth_place:
+          type: string
+          description: Place of birth
+          example: "Makassar"
+        birth_date:
+          type: string
+          format: date
+          description: Date of birth in YYYY-MM-DD format
+          example: "1998-02-11"
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: Phone number in E.164 format
+          example: "+62812345678"
+        email:
+          type: string
+          format: email
+          description: Email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Password (minimum 8 characters)
+          example: "password123"
+        password_confirmation:
+          type: string
+          format: password
+          description: Password confirmation (must match password)
+          example: "password123"
       required:
         - company_code
         - name
@@ -883,227 +790,20 @@ components:
         - email
         - password
         - password_confirmation
-      properties:
-        company_departemen:
-          type: string
-          nullable: true
-          description: Company department
-          example: "RnD"
-        company_position:
-          type: string
-          nullable: true
-          description: Company position
-          example: "UI UX Designer"
-        company_code:
-          type: string
-          description: Company unique code (required)
-          example: "REFAW213"
-        name:
-          type: string
-          description: Employee full name (required)
-          example: "John Doe"
-        birth_place:
-          type: string
-          nullable: true
-          description: Place of birth
-          example: "Makassar"
-        birth_date:
-          type: string
-          nullable: true
-          description: Date of birth (MM/DD/YYYY format)
-          example: "11/2/1998"
-        phone:
-          type: string
-          description: Phone number (required)
-          example: "+62812345678"
-        email:
-          type: string
-          format: email
-          description: Email address (required)
-          example: "john.doe@example.com"
-        password:
-          type: string
-          format: password
-          minLength: 6
-          description: Password (required)
-          example: "password123"
-        password_confirmation:
-          type: string
-          format: password
-          description: Password confirmation (required)
-          example: "password123"
 
     EmployeeRegisterResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Success Register, Please Check Your Email"
-
-    LoginResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Success Login"
-        data:
-          type: object
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
           properties:
-            token:
+            success:
+              type: boolean
+              enum: [true]
+            message:
               type: string
-              description: JWT access token
-              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            refresh_token:
-              type: string
-              description: JWT refresh token
-              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            ttl:
-              type: integer
-              description: Token time to live in seconds
-              example: 123
+              example: "Success Register, Please Check Your Email"
 
-tags:
-  - name: Authentication
-    description: User authentication and authorization
-  - name: Employee
-    description: Employee information and management
-  - name: Announcements
-    description: Company announcements and news
-
-    CreateAnnouncementRequest:
-      type: object
-      required:
-        - title
-        - category
-        - view_start_date
-        - view_end_date
-        - content
-        - target_audience
-      properties:
-        token:
-          type: string
-          description: Authorization token
-          example: "fdasjkhfkajdhfa"
-        title:
-          type: string
-          nullable: true
-          description: Announcement title (required)
-          example: "New Company Policy"
-        category:
-          type: string
-          nullable: true
-          description: Announcement category (required)
-          example: "HR"
-        view_start_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: Start date when announcement becomes visible (required)
-          example: "2023-12-01T08:00:00Z"
-        view_end_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: End date when announcement stops being visible (required)
-          example: "2023-12-31T23:59:59Z"
-        image_url:
-          type: string
-          nullable: true
-          description: URL to announcement image (optional)
-          example: "https://example.com/announcements/policy.jpg"
-        content:
-          type: string
-          nullable: true
-          description: Announcement content/description (required)
-          example: "Please review the updated company policy document."
-        target_audience:
-          type: string
-          description: Comma-separated position IDs for target audience (required)
-          example: "1231,12312,12312,12312"
-
-    CreateAnnouncementResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Announcement created successfully"
-        data:
-          type: object
-          example: {}
-
-    UpdateAnnouncementRequest:
-      type: object
-      required:
-        - title
-        - category
-        - view_start_date
-        - view_end_date
-        - content
-        - target_audience
-      properties:
-        token:
-          type: string
-          description: Authorization token
-          example: "fdasjkhfkajdhfa"
-        title:
-          type: string
-          nullable: true
-          description: Announcement title (required)
-          example: "Updated Company Policy"
-        category:
-          type: string
-          nullable: true
-          description: Announcement category (required)
-          example: "HR"
-        view_start_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: Start date when announcement becomes visible (required)
-          example: "2023-12-01T08:00:00Z"
-        view_end_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: End date when announcement stops being visible (required)
-          example: "2023-12-31T23:59:59Z"
-        image_url:
-          type: string
-          nullable: true
-          description: URL to announcement image (optional)
-          example: "https://example.com/announcements/updated-policy.jpg"
-        content:
-          type: string
-          nullable: true
-          description: Announcement content/description (required)
-          example: "Please review the updated company policy document with new changes."
-        target_audience:
-          type: string
-          description: Comma-separated position IDs for target audience (required)
-          example: "1231,12312,12312,12312"
-
-    UpdateAnnouncementResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Announcement updated successfully"
-        data:
-          type: object
-          example: {}
-
+    # Announcement Schemas
     Announcement:
       type: object
       properties:
@@ -1131,96 +831,80 @@ tags:
           example: "2023-12-31T23:59:59Z"
         image_url:
           type: string
-          nullable: true
+          format: uri
           description: URL to announcement image
           example: "https://example.com/announcements/meeting.jpg"
         content:
           type: string
           description: Announcement content/description
           example: "Monthly company meeting will be held on December 15th."
+      required:
+        - id
+        - title
+        - category
+        - view_start_date
+        - view_end_date
+        - content
 
     AnnouncementsResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Success"
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Announcement'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [true]
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Announcement'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+          required:
+            - data
+            - pagination
 
     CreateAnnouncementRequest:
       type: object
-      required:
-        - title
-        - category
-        - view_start_date
-        - view_end_date
-        - content
-        - target_audience
       properties:
-        token:
-          type: string
-          description: Authorization token
-          example: "fdasjkhfkajdhfa"
         title:
           type: string
-          nullable: true
-          description: Announcement title (required)
+          minLength: 1
+          maxLength: 200
+          description: Announcement title
           example: "New Company Policy"
         category:
           type: string
-          nullable: true
-          description: Announcement category (required)
+          minLength: 1
+          maxLength: 50
+          description: Announcement category
           example: "HR"
         view_start_date:
           type: string
           format: date-time
-          nullable: true
-          description: Start date when announcement becomes visible (required)
+          description: Start date when announcement becomes visible
           example: "2023-12-01T08:00:00Z"
         view_end_date:
           type: string
           format: date-time
-          nullable: true
-          description: End date when announcement stops being visible (required)
+          description: End date when announcement stops being visible
           example: "2023-12-31T23:59:59Z"
         image_url:
           type: string
-          nullable: true
-          description: URL to announcement image (optional)
+          format: uri
+          description: URL to announcement image
           example: "https://example.com/announcements/policy.jpg"
         content:
           type: string
-          nullable: true
-          description: Announcement content/description (required)
+          minLength: 1
+          maxLength: 5000
+          description: Announcement content/description
           example: "Please review the updated company policy document."
         target_audience:
           type: string
-          description: Comma-separated position IDs for target audience (required)
+          pattern: '^\d+(,\d+)*$'
+          description: Comma-separated position IDs for target audience
           example: "1231,12312,12312,12312"
-
-    CreateAnnouncementResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Announcement created successfully"
-        data:
-          type: object
-          example: {}
-
-    UpdateAnnouncementRequest:
-      type: object
       required:
         - title
         - category
@@ -1228,80 +912,174 @@ tags:
         - view_end_date
         - content
         - target_audience
+
+    CreateAnnouncementResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [true]
+            message:
+              type: string
+              example: "Announcement created successfully"
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Created announcement ID
+                  example: "123"
+                created_at:
+                  type: string
+                  format: date-time
+                  description: Creation timestamp
+                  example: "2023-12-01T08:00:00Z"
+              required:
+                - id
+                - created_at
+          required:
+            - data
+
+    UpdateAnnouncementRequest:
+      type: object
       properties:
-        token:
-          type: string
-          description: Authorization token
-          example: "fdasjkhfkajdhfa"
         title:
           type: string
-          nullable: true
-          description: Announcement title (required)
+          minLength: 1
+          maxLength: 200
+          description: Announcement title
           example: "Updated Company Policy"
         category:
           type: string
-          nullable: true
-          description: Announcement category (required)
+          minLength: 1
+          maxLength: 50
+          description: Announcement category
           example: "HR"
         view_start_date:
           type: string
           format: date-time
-          nullable: true
-          description: Start date when announcement becomes visible (required)
+          description: Start date when announcement becomes visible
           example: "2023-12-01T08:00:00Z"
         view_end_date:
           type: string
           format: date-time
-          nullable: true
-          description: End date when announcement stops being visible (required)
+          description: End date when announcement stops being visible
           example: "2023-12-31T23:59:59Z"
         image_url:
           type: string
-          nullable: true
-          description: URL to announcement image (optional)
+          format: uri
+          description: URL to announcement image
           example: "https://example.com/announcements/updated-policy.jpg"
         content:
           type: string
-          nullable: true
-          description: Announcement content/description (required)
+          minLength: 1
+          maxLength: 5000
+          description: Announcement content/description
           example: "Please review the updated company policy document with new changes."
         target_audience:
           type: string
-          description: Comma-separated position IDs for target audience (required)
+          pattern: '^\d+(,\d+)*$'
+          description: Comma-separated position IDs for target audience
           example: "1231,12312,12312,12312"
+      required:
+        - title
+        - category
+        - view_start_date
+        - view_end_date
+        - content
+        - target_audience
 
     UpdateAnnouncementResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Announcement updated successfully"
-        data:
-          type: object
-          example: {}
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [true]
+            message:
+              type: string
+              example: "Announcement updated successfully"
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Updated announcement ID
+                  example: "123"
+                updated_at:
+                  type: string
+                  format: date-time
+                  description: Update timestamp
+                  example: "2023-12-01T10:30:00Z"
+              required:
+                - id
+                - updated_at
+          required:
+            - data
 
-    DeleteAnnouncementRequest:
-      type: object
-      required:
-        - token
-      properties:
-        token:
-          type: string
-          description: Authorization token
-          example: "fdasjkhfkajdhfa"
+  responses:
+    UnauthorizedError:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              summary: Missing or invalid token
+              value:
+                success: false
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Authentication required"
 
-    DeleteAnnouncementResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Announcement deleted successfully"
-        data:
-          type: object
-          example: {}
+    ForbiddenError:
+      description: Insufficient permissions to access resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              summary: Insufficient permissions
+              value:
+                success: false
+                error:
+                  code: "FORBIDDEN"
+                  message: "Insufficient permissions to access this resource"
+
+    NotFoundError:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            not_found:
+              summary: Resource not found
+              value:
+                success: false
+                error:
+                  code: "NOT_FOUND"
+                  message: "The requested resource was not found"
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          examples:
+            validation_failed:
+              summary: Validation errors
+              value:
+                success: false
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "The given data was invalid"
+                  details:
+                    email: ["The email field is required."]
+                    password: ["The password must be at least 8 characters."]
