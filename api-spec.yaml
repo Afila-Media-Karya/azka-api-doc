@@ -654,172 +654,72 @@ tags:
               type: integer
               description: Token time to live in seconds
               example: 123
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_credentials:
-                  summary: Invalid email or password
-                  value:
-                    success: false
-                    error:
-                      code: "INVALID_CREDENTIALS"
-                      message: "Invalid email or password"
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-  # Register - Employee Register
-  /employee/register:
-    post:
-      tags:
-        - Employee
-      summary: Register new employee
-      description: Register a new employee with company information and personal details
-      operationId: registerEmployee
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EmployeeRegisterRequest'
-            examples:
-              valid_registration:
-                summary: Valid employee registration
-                value:
-                  company_departemen: "RnD"
-                  company_position: "UI UX Designer"
-                  company_code: "REFAW213"
-                  name: "John Doe"
-                  birth_place: "Makassar"
-                  birth_date: "11/2/1998"
-                  phone: "+62812345678"
-                  email: "john.doe@example.com"
-                  password: "password123"
-                  password_confirmation: "password123"
-      responses:
-        '200':
-          description: Employee registration successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EmployeeRegisterResponse'
-              examples:
-                success:
-                  summary: Successful registration
-                  value:
-                    success: true
-                    message: "Success Register, Please Check Your Email"
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-              examples:
-                validation_error:
-                  summary: Validation failed
-                  value:
-                    success: false
-                    error:
-                      code: "VALIDATION_ERROR"
-                      message: "The given data was invalid"
-                      details:
-                        email: ["The email field is required."]
-                        password: ["The password must be at least 8 characters."]
-        '409':
-          description: Employee already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                already_exists:
-                  summary: Employee already registered
-                  value:
-                    success: false
-                    error:
-                      code: "EMPLOYEE_EXISTS"
-                      message: "Employee with this email already exists"
-  
-  # Employee Endpoints
-  /employee:
-    get:
-      tags:
-        - Employee
-      summary: Get current employee information
-      description: Retrieve the current employee's detailed information
-      operationId: getCurrentEmployee
-      parameters:
-        - name: token
-          in: query
-          description: Authentication token
-          required: true
-          schema:
-            type: string
-            example: "fdasjkhfkajdhfa"
-      responses:
-        '200':
-          description: Employee information retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EmployeeResponse'
-              examples:
-                success:
-                  summary: Successful employee data retrieval
-                  value:
-                    success: true
-                    message: "Success"
-                    data:
-                      id: "1"
-                      name: "John Doe"
-                      email: "john.doe@afila.co.id"
-                      phone: "+62812345678"
-                      position_id: "pos_001"
-                      position_name: "Software Engineer"
-                      departemen_id: "dept_001"
-                      departemen_name: "IT Department"
-                      profile_image_url: "https://example.com/profile/john.jpg"
-                      company_name: "Afila Technology"
-                      created_at: "2023-01-15T08:30:00Z"
-                      updated_at: "2023-12-01T10:15:00Z"
-        '401':
-          description: Invalid or missing token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_token:
-                  summary: Invalid token
-                  value:
-                    success: false
-                    error:
-                      code: "INVALID_TOKEN"
-                      message: "Invalid or expired token"
-        '404':
-          description: Employee not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Employee not found
-                  value:
-                    success: false
-                    error:
-                      code: "EMPLOYEE_NOT_FOUND"
-                      message: "Employee information not found"
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
+
+    EmployeeRegisterRequest:
+      type: object
+      required:
+        - company_code
+        - name
+        - phone
+        - email
+        - password
+        - password_confirmation
+      properties:
+        company_departemen:
+          type: string
+          nullable: true
+          description: Company department
+          example: "RnD"
+        company_position:
+          type: string
+          nullable: true
+          description: Company position
+          example: "UI UX Designer"
+        company_code:
+          type: string
+          description: Company unique code (required)
+          example: "REFAW213"
+        name:
+          type: string
+          description: Employee full name (required)
+          example: "John Doe"
+        birth_place:
+          type: string
+          nullable: true
+          description: Place of birth
+          example: "Makassar"
+        birth_date:
+          type: string
+          nullable: true
+          description: Date of birth (MM/DD/YYYY format)
+          example: "11/2/1998"
+        phone:
+          type: string
+          description: Phone number (required)
+          example: "+62812345678"
+        email:
+          type: string
+          format: email
+          description: Email address (required)
+          example: "john.doe@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 6
+          description: Password (required)
+          example: "password123"
+        password_confirmation:
+          type: string
+          format: password
+          description: Password confirmation (required)
+          example: "password123"
+
+    EmployeeRegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Success Register, Please Check Your Email"
