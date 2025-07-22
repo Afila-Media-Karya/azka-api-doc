@@ -442,6 +442,96 @@ paths:
                         category: ["The category field is required."]
                         view_start_date: ["The view start date field is required."]
 
+  /announcements/{id}:
+    put:
+      tags:
+        - Announcements
+      summary: Update announcement
+      description: Update an existing announcement with new details
+      operationId: updateAnnouncement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Announcement ID to update
+          required: true
+          schema:
+            type: integer
+            example: 123
+        - name: Authorization
+          in: header
+          description: Bearer token for authentication
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAnnouncementRequest'
+            examples:
+              valid_update:
+                summary: Valid announcement update
+                value:
+                  token: "fdasjkhfkajdhfa"
+                  title: "Updated Company Policy"
+                  category: "HR"
+                  view_start_date: "2023-12-01T08:00:00Z"
+                  view_end_date: "2023-12-31T23:59:59Z"
+                  image_url: "https://example.com/announcements/updated-policy.jpg"
+                  content: "Please review the updated company policy document with new changes."
+                  target_audience: "1231,12312,12312,12312"
+      responses:
+        '200':
+          description: Announcement updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateAnnouncementResponse'
+              examples:
+                success:
+                  summary: Successful announcement update
+                  value:
+                    success: true
+                    message: "Announcement updated successfully"
+                    data: {}
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Announcement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: Announcement not found
+                  value:
+                    success: false
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Announcement not found"
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    success: false
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "The given data was invalid"
+                      details:
+                        title: ["The title field is required."]
+                        category: ["The category field is required."]
+
 components:
   securitySchemes:
     bearerAuth:
@@ -867,6 +957,70 @@ tags:
         message:
           type: string
           example: "Announcement created successfully"
+        data:
+          type: object
+          example: {}
+
+    UpdateAnnouncementRequest:
+      type: object
+      required:
+        - title
+        - category
+        - view_start_date
+        - view_end_date
+        - content
+        - target_audience
+      properties:
+        token:
+          type: string
+          description: Authorization token
+          example: "fdasjkhfkajdhfa"
+        title:
+          type: string
+          nullable: true
+          description: Announcement title (required)
+          example: "Updated Company Policy"
+        category:
+          type: string
+          nullable: true
+          description: Announcement category (required)
+          example: "HR"
+        view_start_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Start date when announcement becomes visible (required)
+          example: "2023-12-01T08:00:00Z"
+        view_end_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: End date when announcement stops being visible (required)
+          example: "2023-12-31T23:59:59Z"
+        image_url:
+          type: string
+          nullable: true
+          description: URL to announcement image (optional)
+          example: "https://example.com/announcements/updated-policy.jpg"
+        content:
+          type: string
+          nullable: true
+          description: Announcement content/description (required)
+          example: "Please review the updated company policy document with new changes."
+        target_audience:
+          type: string
+          description: Comma-separated position IDs for target audience (required)
+          example: "1231,12312,12312,12312"
+
+    UpdateAnnouncementResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Announcement updated successfully"
         data:
           type: object
           example: {}
