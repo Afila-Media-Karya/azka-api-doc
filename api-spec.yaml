@@ -655,64 +655,64 @@ tags:
               description: Token time to live in seconds
               example: 123
 
-    EmployeeRegisterRequest:
-      type: object
-      required:
-        - company_code
-        - name
-        - phone
-        - email
-        - password
-        - password_confirmation
-      properties:
-        company_departemen:
-          type: string
-          nullable: true
-          description: Company department
-          example: "RnD"
-        company_position:
-          type: string
-          nullable: true
-          description: Company position
-          example: "UI UX Designer"
-        company_code:
-          type: string
-          description: Company unique code (required)
-          example: "REFAW213"
-        name:
-          type: string
-          description: Employee full name (required)
-          example: "John Doe"
-        birth_place:
-          type: string
-          nullable: true
-          description: Place of birth
-          example: "Makassar"
-        birth_date:
-          type: string
-          nullable: true
-          description: Date of birth (MM/DD/YYYY format)
-          example: "11/2/1998"
-        phone:
-          type: string
-          description: Phone number (required)
-          example: "+62812345678"
-        email:
-          type: string
-          format: email
-          description: Email address (required)
-          example: "john.doe@example.com"
-        password:
-          type: string
-          format: password
-          minLength: 6
-          description: Password (required)
-          example: "password123"
-        password_confirmation:
-          type: string
-          format: password
-          description: Password confirmation (required)
-          example: "password123"
+    # EmployeeRegisterRequest:
+    #   type: object
+    #   required:
+    #     - company_code
+    #     - name
+    #     - phone
+    #     - email
+    #     - password
+    #     - password_confirmation
+    #   properties:
+    #     company_departemen:
+    #       type: string
+    #       nullable: true
+    #       description: Company department
+    #       example: "RnD"
+    #     company_position:
+    #       type: string
+    #       nullable: true
+    #       description: Company position
+    #       example: "UI UX Designer"
+    #     company_code:
+    #       type: string
+    #       description: Company unique code (required)
+    #       example: "REFAW213"
+    #     name:
+    #       type: string
+    #       description: Employee full name (required)
+    #       example: "John Doe"
+    #     birth_place:
+    #       type: string
+    #       nullable: true
+    #       description: Place of birth
+    #       example: "Makassar"
+    #     birth_date:
+    #       type: string
+    #       nullable: true
+    #       description: Date of birth (MM/DD/YYYY format)
+    #       example: "11/2/1998"
+    #     phone:
+    #       type: string
+    #       description: Phone number (required)
+    #       example: "+62812345678"
+    #     email:
+    #       type: string
+    #       format: email
+    #       description: Email address (required)
+    #       example: "john.doe@example.com"
+    #     password:
+    #       type: string
+    #       format: password
+    #       minLength: 6
+    #       description: Password (required)
+    #       example: "password123"
+    #     password_confirmation:
+    #       type: string
+    #       format: password
+    #       description: Password confirmation (required)
+    #       example: "password123"
 
     EmployeeRegisterResponse:
       type: object
