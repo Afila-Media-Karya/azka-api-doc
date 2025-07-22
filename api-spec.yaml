@@ -141,6 +141,7 @@ paths:
                     error:
                       code: "COMPANY_NOT_FOUND"
                       message: "Company with the provided code not found"
+  
   # Register - Employee Register
   /employee/register:
     post:
@@ -291,6 +292,87 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationErrorResponse'
 
+  # Announcements Endpoints
+  /announcements:
+    get:
+      tags:
+        - Announcements
+      summary: Get announcements with pagination
+      description: Retrieve announcements with pagination and filtering options
+      operationId: getAnnouncements
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          description: Bearer token for authentication
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+      responses:
+        '200':
+          description: Announcements retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnouncementsResponse'
+              examples:
+                success:
+                  summary: Successful announcements retrieval
+                  value:
+                    success: true
+                    message: "Success"
+                    data:
+                      - id: "1"
+                        title: "Company Meeting"
+                        category: "General"
+                        view_start_date: "2023-12-01T08:00:00Z"
+                        view_end_date: "2023-12-31T23:59:59Z"
+                        image_url: "https://example.com/announcements/meeting.jpg"
+                        content: "Monthly company meeting will be held on December 15th."
+                      - id: "2"
+                        title: "Holiday Notice"
+                        category: "HR"
+                        view_start_date: "2023-12-20T00:00:00Z"
+                        view_end_date: "2024-01-02T23:59:59Z"
+                        image_url: "https://example.com/announcements/holiday.jpg"
+                        content: "Office will be closed from December 25th to January 1st."
+                    pagination:
+                      current_page: 1
+                      per_page: 10
+                      total: 25
+                      total_pages: 3
+                      has_next_page: true
+                      has_prev_page: false
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -434,13 +516,6 @@ components:
                 error:
                   code: "NOT_FOUND"
                   message: "The requested resource was not found"
-
-tags:
-  - name: Authentication
-    description: User authentication and authorization
-  - name: Employee
-    description: Employee information and management
-
     Employee:
       type: object
       properties:
@@ -655,71 +730,10 @@ tags:
               description: Token time to live in seconds
               example: 123
 
-    # EmployeeRegisterRequest:
-    #   type: object
-    #   required:
-    #     - company_code
-    #     - name
-    #     - phone
-    #     - email
-    #     - password
-    #     - password_confirmation
-    #   properties:
-    #     company_departemen:
-    #       type: string
-    #       nullable: true
-    #       description: Company department
-    #       example: "RnD"
-    #     company_position:
-    #       type: string
-    #       nullable: true
-    #       description: Company position
-    #       example: "UI UX Designer"
-    #     company_code:
-    #       type: string
-    #       description: Company unique code (required)
-    #       example: "REFAW213"
-    #     name:
-    #       type: string
-    #       description: Employee full name (required)
-    #       example: "John Doe"
-    #     birth_place:
-    #       type: string
-    #       nullable: true
-    #       description: Place of birth
-    #       example: "Makassar"
-    #     birth_date:
-    #       type: string
-    #       nullable: true
-    #       description: Date of birth (MM/DD/YYYY format)
-    #       example: "11/2/1998"
-    #     phone:
-    #       type: string
-    #       description: Phone number (required)
-    #       example: "+62812345678"
-    #     email:
-    #       type: string
-    #       format: email
-    #       description: Email address (required)
-    #       example: "john.doe@example.com"
-    #     password:
-    #       type: string
-    #       format: password
-    #       minLength: 6
-    #       description: Password (required)
-    #       example: "password123"
-    #     password_confirmation:
-    #       type: string
-    #       format: password
-    #       description: Password confirmation (required)
-    #       example: "password123"
-
-    # EmployeeRegisterResponse:
-    #   type: object
-    #   properties:
-    #     success:
-    #       type: boolean
-    #       example: true
-    #     message:
-    #       type: string
-    #       example: "Success Register, Please Check Your Email"
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Employee
+    description: Employee information and management
+  - name: Announcements
+    description: Company announcements and news
